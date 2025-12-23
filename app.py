@@ -1,88 +1,85 @@
 import streamlit as st
-import time
-from openai import OpenAI
 
-# ------------------ PAGE CONFIG ------------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="AI Health FAQ Chatbot",
-    page_icon="🩺",
+    page_icon="💬",
     layout="centered"
 )
 
-# ------------------ DISCLAIMER ------------------
-DISCLAIMER = (
-    "⚠️ **Disclaimer:** This chatbot provides general health information only "
-    "and is not a substitute for professional medical advice. "
-    "Please consult a qualified healthcare professional."
+# ---------------- CUSTOM CSS (DARK THEME) ----------------
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        font-family: Arial, sans-serif;
+        color: #e0e0e0;
+    }
+
+    .card {
+        background-color: #1e1e1e;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0px 8px 25px rgba(0,0,0,0.8);
+        margin-top: 40px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #80cbc4;
+    }
+
+    .stTextInput > div > div > input {
+        background-color: #2c2c2c;
+        color: #ffffff;
+        border-radius: 10px;
+        border: 1px solid #555;
+    }
+
+    .footer {
+        text-align: center;
+        font-size: 13px;
+        color: #b0bec5;
+        margin-top: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
-# ------------------ UI HEADER ------------------
+# ---------------- UI ----------------
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+
 st.title("🩺 AI Health FAQ Chatbot")
-st.markdown(DISCLAIMER)
-st.divider()
+st.write("Ask simple health-related questions")
 
-# ------------------ API KEY CHECK ------------------
-if "OPENAI_API_KEY" not in st.secrets:
-    st.error("🚨 OpenAI API key not found. Please add it in Streamlit Secrets.")
-    st.stop()
+faq = {
+    "fever": "Fever is a temporary increase in body temperature. Drink fluids and rest. See a doctor if it lasts more than 2 days.",
+    "cold": "Common cold causes runny nose and sneezing. Rest and warm fluids help.",
+    "headache": "Headache can be due to stress or dehydration. Drink water and rest.",
+    "cough": "Cough may be due to cold or allergy. Warm water and honey may help.",
+    "covid": "COVID-19 symptoms include fever, cough, and breathing issues. Get tested if symptoms appear.",
+    "diabetes": "Diabetes is a condition where blood sugar levels are high. Regular checkups are important.",
+    "bp": "High blood pressure can cause heart problems. Reduce salt and stress."
+}
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# ------------------ SESSION STATE ------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "last_call_time" not in st.session_state:
-    st.session_state.last_call_time = 0
-
-# ------------------ DISPLAY CHAT HISTORY ------------------
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# ------------------ USER INPUT ------------------
-user_input = st.chat_input("Ask a health-related question...")
+user_input = st.text_input("Enter your health question:")
 
 if user_input:
-    # ---- SIMPLE RATE LIMIT (PREVENT SPAM) ----
-    if time.time() - st.session_state.last_call_time < 6:
-        st.warning("⏳ Please wait a few seconds before asking another question.")
-        st.stop()
+    found = False
+    for key in faq:
+        if key in user_input.lower():
+            st.success(faq[key])
+            found = True
+            break
 
-    st.session_state.last_call_time = time.time()
+    if not found:
+        st.warning("Sorry, I can answer only basic health FAQs. Please consult a doctor.")
 
-    # Save user message
-    st.session_state.messages.append(
-        {"role": "user", "content": user_input}
-    )
+st.markdown("</div>", unsafe_allow_html=True)
 
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = client.responses.create(
-                model="gpt-4.1-mini",
-                input=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a health FAQ assistant. "
-                            "Provide only general, educational health information. "
-                            "Do NOT diagnose diseases or prescribe medicines. "
-                            "If symptoms sound serious, advise consulting a doctor."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": user_input
-                    }
-                ]
-            )
-
-            answer = response.output_text
-            final_answer = f"{answer}\n\n{DISCLAIMER}"
-
-            st.markdown(final_answer)
-
-            # Save assistant message
-            st.session_state.messages.append(
-                {"role": "assistant", "content": final_answer}
-            )
+st.markdown(
+    "<div class='footer'>⚠️ This chatbot provides basic information only. Not a medical diagnosis.</div>",
+    unsafe_allow_html=True
+)
